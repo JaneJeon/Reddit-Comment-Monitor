@@ -15,6 +15,7 @@ In addition, you may have to adjust security settings on your sender email to al
 """
 
 import praw
+import prawcore
 import json as jason
 import time
 import smtplib
@@ -23,14 +24,21 @@ from email.mime.text import MIMEText
 
 with open('settings.json') as params:
 	login = jason.load(params)
+	
+result = False
+while not result:
+	try:
+		reddit = praw.Reddit(client_id=login["client_id"],
+							 client_secret=login["client_secret"],
+							 user_agent=login["user_agent"],
+							 password=login["password"],
+							 username=login["username"])
 
-reddit = praw.Reddit(client_id=login["client_id"],
-					 client_secret=login["client_secret"],
-					 user_agent=login["user_agent"],
-					 password=login["password"],
-					 username=login["username"])
-
-print(f'Monitoring: {str(reddit.user.me())} with {str(reddit.user.me().comment_karma)} comment karma\n')
+		print(f'Monitoring: {str(reddit.user.me())} with {str(reddit.user.me().comment_karma)} comment karma\n')
+		result = True
+	except prawcore.exceptions.ResponseException:
+		print('Probably a 503 error from Reddit API side')
+		time.sleep(60)
 
 def sendemail(body, karma, reason):
 	# I'm using gmail for my sender email, but for other email services, look up its smtp address and TLS port number
