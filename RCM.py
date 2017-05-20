@@ -36,7 +36,7 @@ while not result:
 
 		print(f'Monitoring: {str(reddit.user.me())} with {str(reddit.user.me().comment_karma)} comment karma\n')
 		result = True
-	except prawcore.exceptions.ResponseException:
+	except:
 		print('Probably a 503 error from Reddit API side')
 		time.sleep(60)
 
@@ -60,30 +60,34 @@ def sendemail(body, karma, reason):
 	del msg
 
 # test mail to make sure your settings are working: again, make sure your sender email is configured properly
-# sendemail('test mail', 42, 'this is a test')
+sendemail('test mail', 42, 'this is a test')
 
 history = {}
 watch = {}
 
 while True:
-	# check comments' status
-	for comment in reddit.user.me().comments.new():
-		if comment.score < 1:
-			sendemail(comment.body, comment.score, 'Comment reached score of zero.')
-			comment.delete()
-		elif len(comment.replies.list()) > 0:
-			for reply in comment.replies:
-				# if there is a reply and your comment is vulnerable to being mass downvoted, monitor the score for
-				# both the comment and the reply. Delete when your score drops by 2 and theirs increase by 2
-				if comment.score > 4 and reply not in history:
-					history.update({reply: comment.score})
-					watch.update({reply: reply.score})
+	try:
+		# check comments' status
+		for comment in reddit.user.me().comments.new():
+			if comment.score < 1:
+				sendemail(comment.body, comment.score, 'it reached a score of zero.')
+				comment.delete()
+			elif len(comment.replies.list()) > 0:
+				for reply in comment.replies:
+					# if there is a reply and your comment is vulnerable to being mass downvoted, monitor the score for
+					# both the comment and the reply. Delete when your score drops by 2 and theirs increase by 2
+					if comment.score > 4 and reply not in history:
+						history.update({reply: comment.score})
+						watch.update({reply: reply.score})
 
-				if reply in watch and history[reply] < comment.score - 1 and watch[reply] > reply.score + 1:
-					sendemail(comment.body + '\nReply: {reply.body}', comment.score,
-							  'Reply is likely bringing animosity towards original comment.')
-					comment.delete()
-	time.sleep(120)
+					if reply in watch and history[reply] < comment.score - 1 and watch[reply] > reply.score + 1:
+						sendemail(comment.body + '\nReply: {reply.body}', comment.score,
+								  'the reply is likely bringing animosity towards your comment.')
+						comment.delete()
+		time.sleep(120)
+	except:
+		print('Probably a 503 error from Reddit API side')
+		time.sleep(60)
 
 # resource for sending email: https://medium.freecodecamp.com/send-emails-using-code-4fcea9df63f
 # reddit comment details: http://praw.readthedocs.io/en/latest/code_overview/models/comment.html
